@@ -1,31 +1,44 @@
-from dotenv import load_dotenv
-import os
-import base64
-from requests import post, get
+from auth import get_token, get_auth_header
+from requests import get, post
 import json
 
-load_dotenv()
+class User:
+    def __init__(self, token):
+        self.token = token
+    
+    def get_user_id(self):
+        url = 'https://api.spotify.com/v1/me'
+        header = {"Authorization": "Bearer " + token}
 
-client_id = os.getenv("CLIENT_ID")
-client_secret = os.getenv("CLIENT_SECRET")
+        result = get(url, headers=header)
+        json_result = result.json()
 
-def get_token():
-    auth_string = client_id + ":" + client_secret
-    auth_bytes = auth_string.encode("utf-8")
-    auth_base64 = str(base64.b64encode(auth_bytes), "utf-8")
+        self.user_id = json_result['id']
+        
 
-    url = "https://accounts.spotify.com/api/token"
+def get_user_id(token):
+        url = 'https://api.spotify.com/v1/me'
+        headers = get_auth_header(token)
+
+        result = get(url, headers=headers)
+        json_result = result.json()
+
+        return json_result['id']
+
+def create_playlist(playlist_name, token):
+    user_id = get_user_id(token)
+    url = 'https://api.spotify.com/v1/users/' + user_id + '/playlists'
     headers = {
-        "Authorization": "Basic " + auth_base64,
-        "Content-Type": "application/x-www-form-urlencoded"
+        "Authorization": "Bearer " + token,
+        "Content-Type": "application/json"
     }
-    data = {"grant_type":"client_credentials"}
-    result = post(url, headers=headers, data=data)
-    json_result = json.loads(result.content)
-    token = json_result["access_token"]
-    return token
+    data = {
+        "name": playlist_name,
+        "description": "Testing spotify api",
+    }
 
-def get_auth_header(token):
-    return {"Authorization": "Bearer " + token}
+    post(url, headers=headers, data=json.dumps(data))
+    return
 
 token = get_token()
+u1 = User(token)

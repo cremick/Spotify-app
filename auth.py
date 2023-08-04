@@ -3,6 +3,7 @@ import os
 from requests import post, get
 import base64
 import json
+import flask 
 
 load_dotenv()
 
@@ -20,7 +21,7 @@ def get_token():
         'client_id': CLIENT_ID,
         'response_type': 'code',
         'redirect_uri': 'http://localhost:8888/callback',
-        'scope': 'playlist-modify-public user-read-private user-read-email',
+        'scope': 'playlist-modify-public playlist-modify-private user-read-private user-read-email',
     })
 
     # Get code
@@ -45,3 +46,6 @@ def get_token():
     result = post(url=TOKEN_URL, data=data, headers=headers)
     json_result = result.json()
     return json_result['access_token']
+
+def get_auth_header(token):
+    return {"Authorization": "Bearer " + token}
