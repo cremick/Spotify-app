@@ -10,7 +10,6 @@ load_dotenv()
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
-
 def get_token():
     # Urls
     AUTH_URL = 'https://accounts.spotify.com/authorize'
