@@ -15,44 +15,19 @@ def create_playlist(name):
     return result['id']
 
 def get_all_songs():
-    play_result = SPOTIFY.current_user_playlists()
-    
-    num_playlists = play_result['total']
-    all_playlists = play_result['items']
-
+    # empty list to store all songs
     songs = []
-    for p in range(num_playlists):
-        playlist_id = all_playlists[p]['id']
-        song_result = SPOTIFY.playlist_items(playlist_id)
-
-        num_songs = song_result['total']
-        all_songs = song_result['items']
-
-        for s in range(num_songs):
-            if songs.count(all_songs[s]['track']['uri']) == 0:
-                songs.append(all_songs[s]['track']['uri'])
-
-
-    return songs       
-
-def playlist_by_decade(decade):
+    
     # get playlist data
     pl_data = SPOTIFY.current_user_playlists()
     num_playlists = pl_data['total']
     playlists = pl_data['items']
 
-    # create new decade playlist
-    playlist_name = str(decade) + 's'
-    new_playlist_id = create_playlist(playlist_name)
-
-    # empty list to store all songs
-    songs = []
-
     # iterate thru playlists
-    for p in range (num_playlists):
+    for p in range(num_playlists):
         # get playlist id
         playlist_id = playlists[p]['id']
-
+        
         # get song data
         song_data = SPOTIFY.playlist_items(playlist_id)
         num_songs = song_data['total']
@@ -62,26 +37,47 @@ def playlist_by_decade(decade):
         pl_songs = song_data['items']
 
         # iterate thru songs
-        for s in range (num_songs):
-            # song info
-            song_uri = pl_songs[s]['track']['uri']
-            release_date = pl_songs[s]['track']['album']['release_date']
-            year = int(release_date[:4])
+        for s in range(num_songs):
+            # add song if not already added
+            if songs.count(pl_songs[s]['track']['uri']) == 0:
+                songs.append(pl_songs[s]['track']['uri'])
 
-            # check for repeats and proper date
-            if (year >= decade and year <= decade + 9) and songs.count(song_uri) == 0:
-                # add to list
-                songs.append(song_uri)
+    # get saved songs
+    saved_data = SPOTIFY.current_user_saved_tracks()
+    num_saved = saved_data['total']
+    saves = saved_data['items']
 
-    # add songs to playlist
-    if len(songs) > 100:
-        for i in range(0, len(songs), 100):
-            chunk = songs[i:i + 100]
-            SPOTIFY.playlist_add_items(new_playlist_id, chunk)
-    else:
-        SPOTIFY.playlist_add_items(new_playlist_id, songs)
+    # iterate thru saved songs
+    offset = 0
+    for s in range(num_saved):
+        # if limit is reached, get more songs
+        if s % 20 == 0 and s > 0:
+            offset = offset + 20
+            saved_data = SPOTIFY.current_user_saved_tracks(offset=offset)
+            saves = saved_data['items']
 
-playlist_by_decade(1990)
-playlist_by_decade(1970)
-playlist_by_decade(1960)
-playlist_by_decade(1950)
+        # add song if not already added
+        index = s % 20
+        if songs.count(saves[index]['track']['uri']) == 0:
+            songs.append(saves[index]['track']['uri'])
+
+    return songs  
+
+def playlist_by_decade(decade):
+    songs = get_all_songs()
+
+    # create new decade playlist
+    playlist_name = str(decade) + 's'
+    new_playlist_id = create_playlist(playlist_name)
+
+    # iterate thru songs
+    num_songs = len(songs)
+    for s in range(num_songs):
+        # get song info
+        song = SPOTIFY.track(songs[s])
+        release_date = song['album']['release_date']
+        year = int(release_date[:4])
+
+        # add song if it is the correct decade
+        if year >= decade and year <= decade + 9:
+            SPOTIFY.playlist_add_items(new_playlist_id, {songs[s]})
